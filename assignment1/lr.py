@@ -17,46 +17,53 @@ but abc, a, b, etc. are not.
 def get_features(file_path):
     df=pd.read_csv(file_path)[0:100]
     y=np.array(df["selling_price"],dtype=float).reshape(-1,1)
-    df=df.drop(["Index","name","torque","owner","selling_price","seller_type"],axis=1)
+    df=df.drop(["Index","name","torque","transmission","fuel","owner","selling_price","seller_type","transmission","mileage","engine"],axis=1)
 
-    for i in range(len(df["fuel"])):
+    # for i in range(len(df["fuel"])):
 
-        s= df["fuel"][i]
-        df["fuel"][i] = 1.0 if (s == "Petrol") else 0.0
+    #     s= df["fuel"][i]
+    #     df["fuel"][i] = 1.0 if (s == "Petrol") else 0.0
 
-    for i in range(len(df["transmission"])):
+    # for i in range(len(df["transmission"])):
 
-        s= df["transmission"][i]
-        df["transmission"][i] = 1.0 if (s == "Manual") else 0.0 
+    #     s= df["transmission"][i]
+    #     df["transmission"][i] = 1.0 if (s == "Manual") else 0.0 
             
 
-    for i in range(len(df["engine"])):
+    # for i in range(len(df["engine"])):
 
-        s= df["engine"][i]
-        if type(s) == str:
-            if s.endswith(" CC"):
-                res = s[:-(len(" CC"))]
-                df["engine"][i] = float(res)
+    #     s= df["engine"][i]
+    #     if type(s) == str:
+    #         if s.endswith(" CC"):
+    #             res = s[:-(len(" CC"))]
+    #             df["engine"][i] = float(res)
 
-    for i in range(len(df["mileage"])):
+    # for i in range(len(df["mileage"])):
 
-        s= df["mileage"][i]
-        if type(s) == str:
-            if s.endswith(" kmpl"):
-                res = s[:-(len(" kmpl"))]
-                df["mileage"][i] = float(res)
-            elif s.endswith(" km/kg"):
-                res = s[:-(len(" km/kg"))]
-                df["mileage"][i] = float(res)
+    #     s= df["mileage"][i]
+    #     if type(s) == str:
+    #         if s.endswith(" kmpl"):
+    #             res = s[:-(len(" kmpl"))]
+    #             df["mileage"][i] = float(res)
+    #         elif s.endswith(" km/kg"):
+    #             res = s[:-(len(" km/kg"))]
+    #             df["mileage"][i] = float(res)
     # print(df["engine"])
+    print(df.head())
 
     for x in df.head():
+        # print(x)
         # for i in range(len(df[x])):
         df[x] = (df[x]).astype(float)
-        df[x]=np.nan_to_num(df[x])
-        norm = np.linalg.norm(df[x])
+        
+        # df[x]=np.nan_to_num(df[x])
+        # norm = np.linalg.norm(df[x])
+        norm=np.max(df[x],axis=0)
+        # print("yo")
         # print(df[x][0], norm)
+        # print(df[x])
         df[x] = df[x]/norm
+        # print(df[x])
 
     phi=np.array(df)
 
@@ -75,9 +82,15 @@ def compute_RMSE(phi, w , y):
     yhat= phi.dot(w) 
     return np.sqrt(np.sum((yhat-y)**2)/phi.shape[0])
 
-# def generate_output(phi_test, w):
-# 	# writes a file (output.csv) containing target variables in required format for Submission.
-    
+def d_abs(w,p):
+    result=[]
+    for x in w:
+        mask1 = (x>= 0)*p*(x**(p-1))
+        mask2 = (x< 0)*(-p)*(x**(p-1))
+        result.append(mask1+mask2)
+
+    return np.array(result)
+
 	
 def closed_soln(phi, y):
 
@@ -104,6 +117,7 @@ def sgd(phi, y, phi_dev, y_dev) :
     alpha=1
 
     for _ in range(10):    
+            # print(np.sum((phi.dot(w)-y))/n)
         batchindx= np.random.choice(n,int(n/100))
 
         phibatch= np.array([phi[i] for i in batchindx])
@@ -120,36 +134,38 @@ def pnorm(phi, y, phi_dev, y_dev, p) :
     # You may choose to use the dev set to determine point of convergence
     n,d=np.shape(phi)
     w=np.zeros((d,1))
-    alpha=0.01
-
-    print(p)
-
+    alpha=0.001
+    print(phi)
+    print(((phi.dot(w)))/n)
+    # print(y)
 
     if p % 2 ==1:
-        for _ in range(100):
-            w -= alpha*(phi.T.dot((phi.dot(w)-y))/n - 0.0001*p*(w**(p-1))) 
+        # print("p odd")
+        # print(((phi.dot(w)))/n)
+
+        for _ in range(1000):
+            # print(np.sum((phi_dev.dot(w)-y_dev))/n)
+            w -= alpha*(phi.T.dot((phi.dot(w)-y))/n + 0.00000000*d_abs(w,p))
 
     else:
+        
+        # print("p even")
+        # print(((phi.dot(w)-y))/n)
 
-        for _ in range(100):
-            print(w)
-            print(p)
-            w -= alpha*(phi.T.dot((phi.dot(w)-y))/n - 0.0001*p*np.array([x**(p-1) if x>=0 else -x**(p-1) for x in w]))
-
-
-
-
-
-    return w	
-
+        for _ in range(1000):
+            # print(np.sum((phi.dot(w)-y))/n)
+            w -= alpha*(phi.T.dot((phi.dot(w)-y))/n + 0.00000000*p*w**(p-1))
+    return w
+    
 
 def main():
 
         ######## Task 1 #########
         phase = "train"
         phi, y = get_features('df_train.csv')
+        print(phi)
         
-        phase = "eval"
+        # phase = "eval"
         phi_dev, y_dev = get_features('df_val.csv')
         # w1 = closed_soln(phi, y)
         # w2 = gradient_descent(phi, y, phi_dev, y_dev)
@@ -172,8 +188,8 @@ def main():
         # print(abs(r2-r3))
 
 #         ######## Task 2 #########
-        w_p2 = pnorm(phi, y, phi_dev, y_dev, 2)  
-        w_p4 = pnorm(phi, y, phi_dev, y_dev, 4)  
+        w_p2 = pnorm(phi, y, phi_dev, y_dev, 1)  
+        # w_p4 = pnorm(phi, y, phi_dev, y_dev, 4)  
 #         r_p2 = compute_RMSE(phi_dev, w_p2, y_dev)
 #         r_p4 = compute_RMSE(phi_dev, w_p4, y_dev)
 #         print('2: pnorm2')
